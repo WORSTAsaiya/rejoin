@@ -102,10 +102,11 @@
   .feedhead #count { margin:0; }
   #cycle { font-size:12px; font-weight:700; color:#f2f3f5; text-align:right; }
   #cycle.done { color:#b5bac1; font-weight:400; }
-  .pages { grid-column:1 / -1; justify-self:center; order:-1; display:flex; align-items:center; gap:6px; background:rgba(30,31,34,.88); padding:6px 8px; border-radius:12px; }
-  .pages span { font-size:12px; color:#b5bac1; margin:0 4px; }
-  .pg { padding:8px 14px; background:#2b2d31; color:#b5bac1; border:1px solid #4e5058; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
-  .pg.sel { background:#3498db; border-color:#3498db; color:#fff; }
+  .pages { grid-column:1 / -1; justify-self:center; order:-1; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px 10px; background:rgba(30,31,34,.88); padding:6px 10px; border-radius:12px; }
+  .pages label { font-size:12px; color:#b5bac1; margin:0 0 0 6px; }
+  .pages select { padding:8px 12px; background:#2b2d31; color:#f2f3f5; border:1px solid #4e5058; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
+  .pages select:focus { outline:2px solid #3498db; border-color:transparent; }
+  .pages select:disabled { opacity:.5; cursor:not-allowed; }
   #blank { grid-column:2; }
 
   /* ---- webhook input ---- */
@@ -129,7 +130,8 @@
   .note { display:block; margin-top:8px; font-size:11px; color:#b5bac1; }
 
   /* ---- calculator (inside the right panel, under the webhooks) ---- */
-  .calc { margin-top:18px; padding-top:16px; border-top:1px solid #4e5058; }
+  #calcPage { grid-column:2; align-self:start; margin-top:8px; }
+  .calc { margin:0; }
   .calc h2 { margin:0 0 12px; font-size:16px; }
   .calc label.cl { display:block; margin:10px 0 6px; font-size:12px; color:#b5bac1; }
   #calcEgg, #calcKg { width:100%; box-sizing:border-box; padding:10px 12px; background:#1e1f22; color:#f2f3f5;
@@ -158,7 +160,7 @@
     body::before { content:""; order:0; aspect-ratio:1983 / 793; border-radius:12px;
                    background:var(--wall) center / cover no-repeat; }
     body.nowall::before { display:none; }
-    #blank { grid-column:1; }
+    #blank, #calcPage { grid-column:1; }
     .card { order:1; padding:22px 18px; } #left { order:2; } #right { order:3; }
     #left, #right { max-width:none; justify-self:stretch; }
     #opts, #vals, #eggs { flex:1 1 100%; }
@@ -170,10 +172,18 @@
 <body>
 
 <nav class="pages" id="pages">
-  <span>Channels</span>
-  <button class="pg sel" type="button" data-pg="1">STEAL AN EGG</button>
-  <button class="pg" type="button" data-pg="2">Inexistent</button>
-  <button class="pg" type="button" data-pg="3">Inexistent</button>
+  <label for="chSel">Channels</label>
+  <select id="chSel">
+    <option value="1">Steal an egg</option>
+    <option value="2">Inexistent</option>
+    <option value="3">Inexistent</option>
+  </select>
+  <label for="pgSel">Pages</label>
+  <select id="pgSel">
+    <option value="1">Egg Notifiers</option>
+    <option value="2">Egg Values</option>
+    <option value="3">Egg Calculator</option>
+  </select>
 </nav>
 
 <section id="left">
@@ -256,18 +266,24 @@
   <div id="hookStatus"></div>
   <small class="note">You can save up to 3 webhooks, each with its own Egg Options and Egg Values. Pick a webhook, set your options, then press Save. Webhooks are stored on our server so alerts reach you while this page is closed. Remove deletes the selected one.</small>
 
-  <!-- ===== CALCULATOR ===== -->
-  <div class="calc" id="calc">
-    <h2>Egg Calculator</h2>
-    <label class="cl" for="calcEgg">Egg</label>
-    <select id="calcEgg"></select>
-    <label class="cl" for="calcKg">Weight (Kg)</label>
-    <input id="calcKg" type="text" inputmode="decimal" placeholder="e.g. 2270421" autocomplete="off" spellcheck="false">
-    <label class="cl">Mutations (pick any)</label>
-    <div class="chips" id="calcChips"></div>
-    <div class="calcout" id="calcOut"></div>
-  </div>
 </aside>
+
+<!-- Page: Egg Calculator -->
+<section class="panel" id="calcPage" hidden>
+<div class="calc" id="calc">
+  <h2>Egg Calculator</h2>
+  <label class="cl" for="calcEgg">Egg</label>
+  <select id="calcEgg"></select>
+  <label class="cl" for="calcKg">Weight (Kg)</label>
+  <input id="calcKg" type="text" inputmode="decimal" placeholder="e.g. 2270421" autocomplete="off" spellcheck="false">
+  <label class="cl">Mutations (pick any)</label>
+  <div class="chips" id="calcChips"></div>
+  <div class="calcout" id="calcOut"></div>
+</div>
+</section>
+
+<!-- Page: Egg Values (empty for now) -->
+<section id="valuesPage" hidden></section>
 
 <div id="wallLabel"></div>
 
@@ -882,17 +898,22 @@
     $("wallLabel").textContent = ok ? "" : v;
   }
 
-  // ---------- pages ----------
-  $("pages").addEventListener("click", function (e) {
-    var b = e.target.closest(".pg");
-    if (!b) return;
-    var n = +b.dataset.pg;
-    document.querySelectorAll(".pg").forEach(function (x) { x.classList.toggle("sel", x === b); });
-    ["left", "joinCard", "right"].forEach(function (id) { $(id).hidden = n !== 1; });
-    $("blank").hidden = n === 1;
-    setWallpaper(n);
-  });
-  setWallpaper(1);
+  // ---------- channels and pages ----------
+  function showView() {
+    var ch = +$("chSel").value, pg = +$("pgSel").value;
+    var live = ch === 1;                      // only channel 1 exists for now
+    $("pgSel").disabled = !live;
+    $("left").hidden = !(live && pg === 1);
+    $("joinCard").hidden = !(live && pg === 1);
+    $("right").hidden = !(live && pg === 1);
+    $("valuesPage").hidden = !(live && pg === 2);
+    $("calcPage").hidden = !(live && pg === 3);
+    $("blank").hidden = live;
+    setWallpaper(ch);
+  }
+  $("chSel").addEventListener("change", showView);
+  $("pgSel").addEventListener("change", showView);
+  showView();
 
   // ---------- polling ----------
   // ---------- egg countdown (4:50 from the first alert of a round) ----------
