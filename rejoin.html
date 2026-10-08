@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Join Server</title>
+<style>
+  body { --wall:url("https://github.com/WORSTAsaiya/ASAIYASITE/blob/main/WORST.png?raw=true"); margin:0; min-height:100vh; padding:20px; box-sizing:border-box;
+         display:grid; grid-template-columns:minmax(0,1fr) minmax(0,440px) minmax(0,1fr);
+         grid-template-rows:auto 1fr; align-items:center; gap:20px;
+         background-color:#1e1f22;
+         background-image:var(--wall);
+         background-size:cover; background-position:center; background-repeat:no-repeat; background-attachment:fixed;
+         color:#f2f3f5; font-family:system-ui,Segoe UI,Arial,sans-serif; }
+  .card { background:#2b2d31; padding:28px 32px; border-radius:12px; text-align:center; }
+  h1 { margin:0 0 8px; font-size:22px; }
+  p { margin:6px 0 18px; color:#b5bac1; font-size:14px; }
+  .btn { display:inline-block; background:#3498db; color:#fff; text-decoration:none; font-weight:700;
+         padding:12px 22px; border-radius:8px; }
+  code { display:block; margin-top:18px; padding:10px; background:#1e1f22; border-radius:8px;
+         font-size:12px; word-break:break-all; color:#b5bac1; }
+
+  [hidden] { display:none !important; }
+  code:empty { display:none; }
+  #eggbox { display:flex; flex-direction:column; align-items:center; gap:4px; margin-bottom:14px; }
+  #eggbox img { width:110px; height:110px; object-fit:contain; background:#1e1f22; border-radius:12px; margin-bottom:8px; }
+  .eggname { font-size:22px; font-weight:700; }
+  .eggstat { font-size:14px; color:#b5bac1; }
+
+  /* ---- panels ---- */
+  .panel { background:rgba(30,31,34,.88); border-radius:12px; padding:16px; align-self:start; margin-top:8px; }
+  .panel h2 { margin:0 0 12px; font-size:16px; display:flex; justify-content:space-between; align-items:center; }
+  #left { display:flex; flex-direction:column; gap:12px; align-self:start; justify-self:start; width:100%; max-width:720px; margin-top:8px; min-width:0; }
+  #right { justify-self:end; width:100%; max-width:300px; box-sizing:border-box; }
+  #feedPanel { width:340px; max-width:100%; box-sizing:border-box; }
+  #left .panel { margin-top:0; }
+  .filters { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; }
+  #opts { flex:0 0 180px; box-sizing:border-box; }
+  #vals { flex:0 0 270px; box-sizing:border-box; }
+  #eggs { flex:0 0 220px; box-sizing:border-box; }
+  #eggCount { color:#b5bac1; font-weight:400; font-size:13px; }
+  #eggList { max-height:320px; overflow-y:auto; }
+  .egghead { font-size:12px; font-weight:700; margin:10px 0 6px; }
+  .egghead:first-child { margin-top:0; }
+  .egghead.Secret { color:#E74C3C; } .egghead.Eternal { color:#9B59B6; } .egghead.Divine { color:#F1C40F; }
+  .egggrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .eggtile { display:flex; flex-direction:column; align-items:center; gap:4px; background:#2b2d31; border-radius:8px; padding:8px 4px; text-align:center; }
+  .eggtile img { width:44px; height:44px; object-fit:contain; background:#1e1f22; border-radius:6px; }
+  .eggtile span { font-size:11px; color:#f2f3f5; line-height:1.2; word-break:break-word; }
+  details.panel > summary { cursor:pointer; font-size:16px; font-weight:700; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+  details.panel > summary::-webkit-details-marker { display:none; }
+  details.panel > summary::after { content:"\25BE"; color:#b5bac1; transition:transform .15s; }
+  details.panel[open] > summary::after { transform:rotate(180deg); }
+  details.panel { position:relative; }
+  details.panel > .drop { position:absolute; top:100%; left:0; right:0; margin-top:6px; z-index:20; box-sizing:border-box;
+                          background:#1e1f22; border-radius:12px; padding:16px; box-shadow:0 12px 28px rgba(0,0,0,.55); }
+  #left { position:relative; z-index:5; }
+  .resetrow { margin-top:14px; text-align:right; }
+
+  /* ---- egg options (switches) ---- */
+  .opt { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
+  .opt:last-child { margin-bottom:0; }
+  .opt b { display:block; font-size:14px; }
+  .opt small { font-size:11px; color:#b5bac1; }
+  .sw { width:40px; height:22px; border-radius:11px; border:0; background:#4e5058; position:relative; cursor:pointer; flex:none; transition:background .15s; }
+  .sw::after { content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform .15s; }
+  .sw.on { background:#3498db; }
+  .sw.on::after { transform:translateX(18px); }
+
+  /* ---- egg values ---- */
+  .sub { font-size:12px; color:#b5bac1; margin:0 0 6px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+  .chip { border:1px solid #4e5058; background:transparent; color:#f2f3f5; border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer; }
+  .chip.on { background:#3498db; border-color:#3498db; }
+  .srow { margin-top:10px; }
+  .srow label { display:flex; justify-content:space-between; font-size:12px; color:#b5bac1; }
+  .srow output { color:#f2f3f5; }
+  .srow input { width:100%; margin:4px 0 0; accent-color:#3498db; }
+  .reset { background:none; border:0; color:#b5bac1; font-size:12px; cursor:pointer; text-decoration:underline; padding:0; }
+
+  /* ---- feed ---- */
+  #count { font-size:12px; color:#b5bac1; margin-bottom:8px; }
+  #feed { display:flex; flex-direction:column; gap:8px; max-height:45vh; overflow-y:auto; }
+  .item { display:grid; grid-template-columns:56px minmax(0,1fr); gap:10px; align-items:center;
+          padding:10px 12px; background:#2b2d31; border-radius:8px; color:inherit;
+          text-decoration:none; border-left:3px solid #3498db; }
+  .item:hover { background:#34363c; }
+  .item.new { animation:flash 1.6s ease-out; }
+  .item b { display:block; font-size:14px; }
+  .item span { display:block; font-size:12px; color:#b5bac1; margin-top:2px; word-break:break-word; }
+  .item .time { opacity:.7; }
+  .empty { font-size:13px; color:#b5bac1; }
+  .Secret { border-color:#E74C3C; } .Eternal { border-color:#9B59B6; } .Divine { border-color:#F1C40F; }
+  .pic { width:56px; height:56px; border-radius:8px; background:#1e1f22; overflow:hidden; }
+  .pic img { width:100%; height:100%; object-fit:contain; display:block; }
+  .info { min-width:0; }
+
+  #wallLabel { position:fixed; left:50%; bottom:10px; transform:translateX(-50%); font-size:13px; color:#8a8f98; pointer-events:none; }
+  .discord { background:#5865F2; color:#fff; text-decoration:none; font-size:12px; font-weight:700; padding:7px 10px; border-radius:8px; white-space:nowrap; }
+  .discord:hover { filter:brightness(1.1); }
+  .feedhead { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+  .feedhead #count { margin:0; }
+  #cycle { font-size:12px; font-weight:700; color:#f2f3f5; text-align:right; }
+  #cycle.done { color:#b5bac1; font-weight:400; }
+  .pages { grid-column:1 / -1; justify-self:center; order:-1; display:flex; align-items:center; gap:6px; background:rgba(30,31,34,.88); padding:6px 8px; border-radius:12px; }
+  .pages span { font-size:12px; color:#b5bac1; margin:0 4px; }
+  .pg { padding:8px 14px; background:#2b2d31; color:#b5bac1; border:1px solid #4e5058; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
+  .pg.sel { background:#3498db; border-color:#3498db; color:#fff; }
+  #blank { grid-column:2; }
+
+  /* ---- webhook input ---- */
+  #hook { width:100%; box-sizing:border-box; padding:10px 12px; background:#1e1f22; color:#f2f3f5;
+          border:1px solid #4e5058; border-radius:8px; font-size:13px; }
+  #hook:focus { outline:2px solid #3498db; border-color:transparent; }
+
+  .slots { display:flex; gap:6px; margin-bottom:10px; }
+  .slot { flex:1; position:relative; padding:8px 4px; background:#2b2d31; color:#b5bac1; border:1px solid #4e5058; border-radius:8px; font-size:12px; cursor:pointer; }
+  .slot.sel { background:#3498db; border-color:#3498db; color:#fff; }
+  .slot.on::after { content:""; position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%; background:#43b581; }
+  #ping, #pingType { box-sizing:border-box; padding:10px 12px; background:#1e1f22; color:#f2f3f5; border:1px solid #4e5058; border-radius:8px; font-size:13px; }
+  #ping { flex:1; min-width:0; }
+  .pinglabel { display:block; margin:12px 0 6px; font-size:12px; color:#b5bac1; }
+  .pingrow { display:flex; gap:6px; }
+  .hookbtns { display:flex; gap:6px; margin-top:12px; }
+  .hookbtns button { flex:1; padding:9px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; color:#fff; border:0; }
+  .hookbtns .save { background:#3498db; } .hookbtns .ghostbtn { background:#4e5058; }
+  #hookStatus { margin-top:10px; font-size:12px; color:#7bd88f; min-height:16px; word-break:break-word; }
+  #hookStatus.bad { color:#ff7b72; }
+  .note { display:block; margin-top:8px; font-size:11px; color:#b5bac1; }
+
+  /* ---- calculator (inside the right panel, under the webhooks) ---- */
+  .calc { margin-top:18px; padding-top:16px; border-top:1px solid #4e5058; }
+  .calc h2 { margin:0 0 12px; font-size:16px; }
+  .calc label.cl { display:block; margin:10px 0 6px; font-size:12px; color:#b5bac1; }
+  #calcEgg, #calcKg { width:100%; box-sizing:border-box; padding:10px 12px; background:#1e1f22; color:#f2f3f5;
+                      border:1px solid #4e5058; border-radius:8px; font-size:13px; }
+  #calcEgg:focus, #calcKg:focus { outline:2px solid #3498db; border-color:transparent; }
+  .calcout { margin-top:14px; padding:12px; background:#1e1f22; border-radius:8px; }
+  .calcout .big { font-size:22px; font-weight:700; color:#7bd88f; word-break:break-word; }
+  .calcout .line { font-size:12px; color:#b5bac1; margin-top:6px; word-break:break-word; }
+  .calcout .warn { font-size:12px; color:#f1c40f; margin-top:6px; }
+  .calcout .bad { color:#ff7b72; }
+
+  /* ---- join confirmation ---- */
+  dialog { background:#2b2d31; color:#f2f3f5; border:0; border-radius:12px; padding:24px; max-width:340px; width:88%;
+           font-family:system-ui,Segoe UI,Arial,sans-serif; text-align:center; }
+  dialog::backdrop { background:rgba(0,0,0,.65); }
+  dialog h3 { margin:0 0 6px; font-size:18px; }
+  dialog p { margin:0 0 18px; font-size:14px; }
+  .dlgbtns { display:flex; gap:10px; }
+  .dlgbtns button { flex:1; padding:11px; border:0; border-radius:8px; font-weight:700; font-size:15px; cursor:pointer; color:#fff; }
+  .dlgbtns .yes { background:#3498db; } .dlgbtns .no { background:#4e5058; }
+  .never { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:14px; font-size:12px; color:#b5bac1; cursor:pointer; }
+
+  @keyframes flash { from { background:#3d5a80; } to { background:#2b2d31; } }
+  @media (max-width:1200px) {
+    body { grid-template-columns:minmax(0,1fr); justify-content:center; align-items:start; background-image:none; }
+    body::before { content:""; order:0; aspect-ratio:1983 / 793; border-radius:12px;
+                   background:var(--wall) center / cover no-repeat; }
+    body.nowall::before { display:none; }
+    #blank { grid-column:1; }
+    .card { order:1; padding:22px 18px; } #left { order:2; } #right { order:3; }
+    #left, #right { max-width:none; justify-self:stretch; }
+    #opts, #vals, #eggs { flex:1 1 100%; }
+    #feedPanel { width:100%; }
+    #feed { max-height:40vh; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="pages" id="pages">
+  <span>Channels</span>
+  <button class="pg sel" type="button" data-pg="1">STEAL AN EGG</button>
+  <button class="pg" type="button" data-pg="2">Inexistent</button>
+  <button class="pg" type="button" data-pg="3">Inexistent</button>
+</nav>
+
+<section id="left">
+  <div class="filters">
+    <details class="panel" id="opts">
+      <summary>Egg Options</summary>
+      <div class="drop">
+      <div class="opt"><div><b>Secrets</b><small>Only Secret rarities</small></div><button class="sw" type="button" role="switch" aria-checked="false" data-tier="Secret"></button></div>
+      <div class="opt"><div><b>Eternals</b><small>Only Eternal rarities</small></div><button class="sw" type="button" role="switch" aria-checked="false" data-tier="Eternal"></button></div>
+      <div class="opt"><div><b>Divine</b><small>Only Divine rarities</small></div><button class="sw" type="button" role="switch" aria-checked="false" data-tier="Divine"></button></div>
+      <div class="opt"><div><b>All</b><small>Every new webhook</small></div><button class="sw" type="button" role="switch" aria-checked="true" data-tier="All"></button></div>
+    </div>
+    </details>
+
+    <details class="panel" id="vals">
+      <summary>Egg Values</summary>
+      <div class="drop">
+      <p class="sub">Mutation</p>
+      <div class="chips" id="chips">
+        <button class="chip" type="button" data-key="golden">Golden</button>
+        <button class="chip" type="button" data-key="silver">Silver</button>
+        <button class="chip" type="button" data-key="parasite">Parasite</button>
+        <button class="chip" type="button" data-key="rainbow">Rainbow</button>
+        <button class="chip" type="button" data-key="bloom">Bloom</button>
+        <button class="chip" type="button" data-key="spiritbloom">Spirit Bloom</button>
+      </div>
+      <div class="srow"><label for="kgMin">Minimum Kg <output id="kgMinOut"></output></label><input type="range" id="kgMin" min="0" max="199" step="1" value="0"></div>
+      <div class="srow"><label for="kgMax">Maximum Kg <output id="kgMaxOut"></output></label><input type="range" id="kgMax" min="1" max="200" step="1" value="200"></div>
+      <div class="srow"><label for="vMin">Minimum Value <output id="vMinOut"></output></label><input type="range" id="vMin" min="0" max="199" step="1" value="0"></div>
+      <div class="srow"><label for="vMax">Maximum Value <output id="vMaxOut"></output></label><input type="range" id="vMax" min="1" max="200" step="1" value="200"></div>
+    <div class="resetrow"><button class="reset" id="reset" type="button">Reset filters</button></div>
+    </div>
+    </details>
+
+    <details class="panel" id="eggs">
+      <summary><span>Notifying Eggs <span id="eggCount"></span></span></summary>
+      <div class="drop">
+      <div id="eggList"></div>
+    </div>
+    </details>
+  </div>
+
+  <aside class="panel" id="feedPanel">
+    <div class="feedhead"><div id="count"></div><div id="cycle"></div></div>
+    <div id="feed"><div class="empty">Waiting for the first alert...</div></div>
+  </aside>
+</section>
+
+<div class="card" id="joinCard">
+  <div id="eggbox" hidden></div>
+  <h1 id="title">Joining server...</h1>
+  <p id="msg">Your browser may ask to open Roblox. Click Open / Allow.</p>
+  <a id="btn" class="btn" href="#">Open Roblox</a>
+  <code id="raw"></code>
+</div>
+
+<div class="card" id="blank" hidden>
+  <h1>Inexistent</h1>
+  <p>This page doesn't exist yet.</p>
+</div>
+
+<aside class="panel" id="right">
+  <h2>Webhook <a class="discord" href="https://discord.gg/W0RST" target="_blank" rel="noopener noreferrer">Join Our Discord Server</a></h2>
+  <div class="slots" id="slots">
+    <button class="slot sel" type="button" data-slot="1">Webhook 1</button>
+    <button class="slot" type="button" data-slot="2">Webhook 2</button>
+    <button class="slot" type="button" data-slot="3">Webhook 3</button>
+  </div>
+  <input id="hook" type="text" placeholder="Webhook" autocomplete="off" spellcheck="false">
+  <label class="pinglabel" for="ping">Enter Role ID (or) User ID (or) Type "Everyone" if you want it to ping everyone</label>
+  <div class="pingrow">
+    <input id="ping" type="text" placeholder="Role ID / User ID / Everyone" autocomplete="off" spellcheck="false">
+    <select id="pingType"><option value="role">Role</option><option value="user">User</option></select>
+  </div>
+  <div class="hookbtns">
+    <button id="hookSave" class="save" type="button">Save</button>
+    <button id="hookTest" class="ghostbtn" type="button">Test</button>
+    <button id="hookRemove" class="ghostbtn" type="button">Remove</button>
+  </div>
+  <div id="hookStatus"></div>
+  <small class="note">You can save up to 3 webhooks, each with its own Egg Options and Egg Values. Pick a webhook, set your options, then press Save. Webhooks are stored on our server so alerts reach you while this page is closed. Remove deletes the selected one.</small>
+
+  <!-- ===== CALCULATOR ===== -->
+  <div class="calc" id="calc">
+    <h2>Egg Calculator</h2>
+    <label class="cl" for="calcEgg">Egg</label>
+    <select id="calcEgg"></select>
+    <label class="cl" for="calcKg">Weight (Kg)</label>
+    <input id="calcKg" type="text" inputmode="decimal" placeholder="e.g. 2270421" autocomplete="off" spellcheck="false">
+    <label class="cl">Mutations (pick any)</label>
+    <div class="chips" id="calcChips"></div>
+    <div class="calcout" id="calcOut"></div>
+  </div>
+</aside>
+
+<div id="wallLabel"></div>
+
+<dialog id="dlg">
+  <h3>Do you want to join this server?</h3>
+  <p id="dlgEgg"></p>
+  <div class="dlgbtns"><button id="dlgNo" class="no" type="button">Cancel</button><button id="dlgYes" class="yes" type="button">Join</button></div>
+  <label class="never"><input type="checkbox" id="never"> Never remind again</label>
+</dialog>
+
+<script>
+  var FEED_URL = "https://eggfeed.asaiyamain.workers.dev/feed";
+
+  // Wallpaper for each channel. Replace the placeholder text with an image link,
+  // or with the file name of an image you uploaded next to join.html (for example "bg2.png").
+  var WALLPAPERS = {
+    1: "https://github.com/WORSTAsaiya/ASAIYASITE/blob/main/WORST.png?raw=true",
+    2: "https://media1.tenor.com/m/7zgRvAcRNv0AAAAd/mihoyo-genshin.gif",
+    3: "Channel 3 image"
+  };
+  function $(id) { return document.getElementById(id); }
+
+  // ---------- join logic ----------
+  var q = new URLSearchParams(location.search);
+  var placeId = q.get("placeId") || "";
+  var jobId = q.get("jobId") || "";
+  var valid = /^\d{1,20}$/.test(placeId) && /^[0-9a-fA-F-]{36}$/.test(jobId);
+
+  if (!placeId && !jobId) {
+    $("title").textContent = "No server selected";
+    $("msg").textContent = "Pick one from the list.";
+    $("btn").style.display = "none";
+  } else if (!valid) {
+    $("title").textContent = "Invalid link";
+    $("msg").textContent = "The place ID or server ID is missing or malformed.";
+    $("btn").style.display = "none";
+  } else {
+    var url = "roblox://experiences/start?placeId=" + placeId + "&gameInstanceId=" + jobId;
+    $("btn").href = url;
+    $("raw").textContent = url;
+    setTimeout(function () { location.href = url; }, 400);
+  }
+
+  // ---------- filters ----------
+  var TIERS = ["Secret", "Eternal", "Divine"];
+  var MUTS = ["golden", "silver", "parasite", "rainbow", "bloom", "spiritbloom"];
+
+  function defaults() { return { all: true, tiers: {}, mut: {}, kgMin: 0, kgMax: 200, vMin: 0, vMax: 200 }; }
+  var F = defaults();
+
+  function clampInt(v, lo, hi, d) { v = parseInt(v, 10); return isNaN(v) ? d : Math.min(hi, Math.max(lo, v)); }
+
+  function loadF() {
+    try {
+      var o = JSON.parse(localStorage.getItem("eggFilters") || "null");
+      if (!o) return;
+      var f = defaults();
+      f.all = o.all !== false;
+      TIERS.forEach(function (t) { if (o.tiers && o.tiers[t]) f.tiers[t] = true; });
+      MUTS.forEach(function (m) { if (o.mut && o.mut[m]) f.mut[m] = true; });
+      f.kgMin = clampInt(o.kgMin, 0, 199, 0);   f.kgMax = clampInt(o.kgMax, 1, 200, 200);
+      f.vMin = clampInt(o.vMin, 0, 199, 0);     f.vMax = clampInt(o.vMax, 1, 200, 200);
+      if (f.kgMax < f.kgMin) f.kgMax = f.kgMin;
+      if (f.vMax < f.vMin) f.vMax = f.vMin;
+      var n = Object.keys(f.tiers).length;
+      if (n === 0 || n === 3) { f.all = true; f.tiers = {}; }
+      if (f.all) f.tiers = {};
+      F = f;
+    } catch (e) {}
+  }
+  function saveF() { try { localStorage.setItem("eggFilters", JSON.stringify(F)); } catch (e) {} }
+
+  // slider position -> real number (log scale, last position = no limit)
+  function sig2(v) { var m = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.round(v / m) * m; }
+  function kgAt(p) { return p >= 200 ? Infinity : sig2(Math.pow(10, p / 200 * 12)); }                       // 1 Kg ... ~870B Kg
+  function valAt(p) { return p <= 0 ? 0 : p >= 200 ? Infinity : sig2(Math.pow(10, 5 + (p - 1) / 198 * 10)); } // $100K/s ... $1Qa/s
+
+  function compact(n) {
+    var u = ["", "K", "M", "B", "T", "Qa", "Qi"], i = 0;
+    while (n >= 1000 && i < u.length - 1) { n /= 1000; i++; }
+    var s = n >= 100 ? n.toFixed(0) : n >= 10 ? n.toFixed(1) : n.toFixed(2);
+    if (s.indexOf(".") >= 0) s = s.replace(/\.?0+$/, "");
+    return s + u[i];
+  }
+  function kgLabel(p) { var v = kgAt(p); return v === Infinity ? "No limit" : compact(v) + " Kg"; }
+  function valLabel(p, isMin) {
+    var v = valAt(p);
+    if (v === Infinity) return "No limit";
+    if (v === 0) return isMin ? "No minimum" : "$0/s";
+    return "$" + compact(v) + "/s";
+  }
+
+  function norm(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+  var SUF = { "": 1, K: 1e3, M: 1e6, B: 1e9, T: 1e12, Qa: 1e15, Qi: 1e18 };
+  function parseKg(s) { var n = parseFloat(String(s || "").replace(/,/g, "")); return isNaN(n) ? NaN : n; }
+  function parseValue(s) {   // takes the last amount, so "A -> B" uses B (with mutation bonus)
+    var re = /\$([\d.]+)([A-Za-z]*)\/s/g, m, last = NaN;
+    while ((m = re.exec(String(s || "")))) { if (SUF[m[2]]) last = parseFloat(m[1]) * SUF[m[2]]; }
+    return last;
+  }
+
+  function passes(it) {
+    if (!F.all && !F.tiers[it.rarity]) return false;
+
+    var wanted = Object.keys(F.mut);
+    if (wanted.length) {
+      var have = String(it.mutation || "").split(",").map(norm);
+      if (!wanted.some(function (m) { return have.indexOf(m) > -1; })) return false;
+    }
+    if (F.kgMin > 0 || F.kgMax < 200) {
+      var kg = parseKg(it.kg);
+      if (isNaN(kg) || kg < kgAt(F.kgMin) || kg > kgAt(F.kgMax)) return false;
+    }
+    if (F.vMin > 0 || F.vMax < 200) {
+      var v = parseValue(it.value);
+      if (isNaN(v) || v < valAt(F.vMin) || v > valAt(F.vMax)) return false;
+    }
+    return true;
+  }
+
+  function syncUI() {
+    document.querySelectorAll(".sw").forEach(function (b) {
+      var t = b.dataset.tier;
+      var on = t === "All" ? F.all : (!F.all && !!F.tiers[t]);
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-checked", on ? "true" : "false");
+    });
+    document.querySelectorAll("#chips .chip").forEach(function (c) { c.classList.toggle("on", !!F.mut[c.dataset.key]); });
+    $("kgMin").value = F.kgMin; $("kgMax").value = F.kgMax;
+    $("vMin").value = F.vMin;   $("vMax").value = F.vMax;
+    $("kgMinOut").textContent = kgLabel(F.kgMin);
+    $("kgMaxOut").textContent = kgLabel(F.kgMax);
+    $("vMinOut").textContent = valLabel(F.vMin, true);
+    $("vMaxOut").textContent = valLabel(F.vMax, false);
+    renderEggs();
+  }
+
+  function changed() { syncUI(); saveF(); render(); }
+
+  // rarity switches: pick one or two; picking all three (or none) becomes "All"
+  $("opts").addEventListener("click", function (e) {
+    var b = e.target.closest(".sw");
+    if (!b) return;
+    var t = b.dataset.tier;
+    if (t === "All") {
+      F.all = true; F.tiers = {};
+    } else if (F.all) {
+      F.all = false; F.tiers = {}; F.tiers[t] = true;
+    } else {
+      if (F.tiers[t]) delete F.tiers[t]; else F.tiers[t] = true;
+      var n = Object.keys(F.tiers).length;
+      if (n === 0 || n === TIERS.length) { F.all = true; F.tiers = {}; }
+    }
+    changed();
+  });
+
+  $("chips").addEventListener("click", function (e) {
+    var c = e.target.closest(".chip");
+    if (!c) return;
+    var k = c.dataset.key;
+    if (F.mut[k]) delete F.mut[k]; else F.mut[k] = true;
+    changed();
+  });
+
+  $("kgMin").addEventListener("input", function () { F.kgMin = +this.value; if (F.kgMax < F.kgMin) F.kgMax = F.kgMin; changed(); });
+  $("kgMax").addEventListener("input", function () { F.kgMax = +this.value; if (F.kgMin > F.kgMax) F.kgMin = F.kgMax; changed(); });
+  $("vMin").addEventListener("input", function () { F.vMin = +this.value; if (F.vMax < F.vMin) F.vMax = F.vMin; changed(); });
+  $("vMax").addEventListener("input", function () { F.vMax = +this.value; if (F.vMin > F.vMax) F.vMin = F.vMax; changed(); });
+  $("reset").addEventListener("click", function () { F = defaults(); changed(); });
+
+  // ---------- notifying eggs list ----------
+  // [name, rarity, image]. Add a line here when you add an egg to the script.
+  var EGGS = [
+    ["RazorFang", "Secret", "https://asaiya2.github.io/steal-an-egg/Rock_Demon.png"],
+    ["Gargoyle", "Secret", "https://asaiya2.github.io/steal-an-egg/Gargoyle_Demon.png"],
+    ["Centaur", "Secret", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQmpo9iE1MHMQNyB2lCJ6QtI4O_Stz7EvDQXu6HZ2WZTw&s"],
+    ["Pure Jellyfish", "Secret", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQIXvOauCXxGctW9tMXU6YeSDuNiL8I_RxhFolmuKZy0A&s"],
+    ["Mutant Shark", "Secret", "https://static.wikia.nocookie.net/stealanegg/images/e/e5/Mutant_Shark.png/revision/latest?cb=20260901190802"],
+    ["Cosmic Skeleton", "Secret", "https://static.wikia.nocookie.net/stealanegg/images/9/97/Cosmic_Skeleton_Boss.png/revision/latest/scale-to-width-down/185?cb=20260904110709"],
+    ["Stag", "Secret", "https://github.com/Asaiya2/steal-an-egg/blob/main/stag.webp?raw=true"],
+    ["Starry Fox", "Secret", "https://asaiya2.github.io/steal-an-egg/Starry_fox.png"],
+    ["Skeleton Horse", "Eternal", "https://asaiya2.github.io/steal-an-egg/Skeleton_horse.png"],
+    ["Pegasus", "Eternal", "https://asaiya2.github.io/steal-an-egg/Pegasus.png"],
+    ["Oni Tiger", "Eternal", "https://asaiya2.github.io/steal-an-egg/Oni_Tiger.png"],
+    ["Gorilla King", "Eternal", "https://asaiya2.github.io/steal-an-egg/Gorrila.png"],
+    ["Eternal Lunar Dragon", "Eternal", "https://asaiya2.github.io/steal-an-egg/Lunar_Dragon.png"],
+    ["Celestial Sunlion", "Eternal", "https://asaiya2.github.io/steal-an-egg/sunlion.png"],
+    ["World Burner", "Divine", "https://asaiya2.github.io/steal-an-egg/World_Burner.png"],
+    ["ArchAngel", "Divine", "https://asaiya2.github.io/steal-an-egg/ArchAngel.png"],
+    ["Nightflame", "Divine", "https://asaiya2.github.io/steal-an-egg/Nightflame.png"],
+    ["Kitsune", "Divine", "https://asaiya2.github.io/steal-an-egg/Kitsune.png"],
+    ["Unicorn", "Divine", "https://asaiya2.github.io/steal-an-egg/Unicorn.png"],
+    ["Royal Skywhale", "Divine", "https://github.com/Asaiya2/steal-an-egg/blob/main/skywhale.png?raw=true"]
+  ];
+  var eggSig = "";
+
+  // shows only the eggs for the rarities switched on in Egg Options
+  function renderEggs() {
+    var sig = F.all ? "all" : Object.keys(F.tiers).sort().join(",");
+    if (sig === eggSig) return;
+    eggSig = sig;
+    var box = $("eggList");
+    box.textContent = "";
+    var total = 0;
+    TIERS.forEach(function (tier) {
+      if (!F.all && !F.tiers[tier]) return;
+      var list = EGGS.filter(function (e) { return e[1] === tier; });
+      if (!list.length) return;
+      total += list.length;
+      box.appendChild(line("div", tier + " (" + list.length + ")", "egghead " + tier));
+      var grid = document.createElement("div");
+      grid.className = "egggrid";
+      list.forEach(function (e) {
+        var tile = document.createElement("div");
+        tile.className = "eggtile";
+        var im = document.createElement("img");
+        im.alt = "";
+        im.referrerPolicy = "no-referrer";
+        im.loading = "lazy";
+        im.onerror = function () { im.style.visibility = "hidden"; };
+        im.src = e[2];
+        tile.appendChild(im);
+        tile.appendChild(line("span", e[0]));
+        grid.appendChild(tile);
+      });
+      box.appendChild(grid);
+    });
+    $("eggCount").textContent = "(" + total + ")";
+  }
+
+  // ---------- live feed ----------
+  var feedEl = $("feed");
+  var allItems = [];
+  var seenKeys = {};
+  var newKeys = {};
+  var firstLoad = true;
+  var lastSig = "";
+
+  function ago(t) {
+    var s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+    if (s < 60) return s + "s ago";
+    if (s < 3600) return Math.floor(s / 60) + "m ago";
+    return Math.floor(s / 3600) + "h ago";
+  }
+
+  function line(tag, text, cls) {
+    var el = document.createElement(tag);
+    el.textContent = text;
+    if (cls) el.className = cls;
+    return el;
+  }
+
+  function safeImg(u) { return typeof u === "string" && /^https:\/\//i.test(u) ? u : ""; }
+
+  var cardFilled = false;
+  function fillCard(items) {
+    var it = null;
+    for (var i = 0; i < items.length; i++) {
+      if (String(items[i].jobId).toLowerCase() === jobId.toLowerCase() && String(items[i].placeId) === placeId) { it = items[i]; break; }
+    }
+    if (!it) return;
+    cardFilled = true;
+    var box = $("eggbox");
+    box.textContent = "";
+    var src = safeImg(it.image);
+    if (src) {
+      var img = document.createElement("img");
+      img.alt = "";
+      img.referrerPolicy = "no-referrer";
+      img.onerror = function () { img.remove(); };
+      img.src = src;
+      box.appendChild(img);
+    }
+    box.appendChild(line("div", it.egg, "eggname"));
+    box.appendChild(line("div", "Kg: " + it.kg, "eggstat"));
+    box.appendChild(line("div", "Mutation: " + (it.mutation && it.mutation !== "NONE" ? it.mutation : "None"), "eggstat"));
+    box.appendChild(line("div", "Value: " + (it.value || "Unknown"), "eggstat"));
+    box.hidden = false;
+    $("title").hidden = true;
+  }
+
+  function setItems(items) {
+    if (valid && !cardFilled) fillCard(items);
+    if (!items.length) return;
+    var sig = items.map(function (it) { return it.jobId + it.t; }).join(",");
+    if (sig === lastSig) return;   // nothing new
+    lastSig = sig;
+    newKeys = {};
+    items.forEach(function (it) {
+      var k = it.jobId + it.t;
+      if (!firstLoad && !seenKeys[k]) newKeys[k] = true;
+      seenKeys[k] = true;
+    });
+    firstLoad = false;
+    allItems = items;
+    render();
+  }
+
+  function render() {
+    var shown = allItems.filter(passes);
+    feedEl.textContent = "";
+    $("count").textContent = allItems.length ? "Showing " + shown.length + " of " + allItems.length : "";
+
+    if (!shown.length) {
+      feedEl.appendChild(line("div", allItems.length ? "No alerts match your filters." : "Waiting for the first alert...", "empty"));
+      return;
+    }
+
+    shown.forEach(function (it) {
+      if (!/^\d{1,20}$/.test(it.placeId) || !/^[0-9a-fA-F-]{36}$/.test(it.jobId)) return;
+      var a = document.createElement("a");
+      a.className = "item " + String(it.rarity).replace(/[^A-Za-z]/g, "");
+      if (newKeys[it.jobId + it.t]) a.className += " new";
+      a.href = "?placeId=" + it.placeId + "&jobId=" + it.jobId;
+      a.dataset.egg = it.egg;
+
+      var pic = document.createElement("div");
+      pic.className = "pic";
+      var src = safeImg(it.image);
+      if (src) {
+        var img = document.createElement("img");
+        img.alt = "";
+        img.referrerPolicy = "no-referrer";
+        img.onerror = function () { img.remove(); };
+        img.src = src;
+        pic.appendChild(img);
+      }
+
+      var info = document.createElement("div");
+      info.className = "info";
+      info.appendChild(line("b", it.egg));
+      info.appendChild(line("span", "Kg: " + it.kg));
+      info.appendChild(line("span", "Mutation: " + (it.mutation && it.mutation !== "NONE" ? it.mutation : "None")));
+      info.appendChild(line("span", "Value: " + (it.value || "Unknown")));
+      var t = line("span", ago(it.t), "time");
+      t.dataset.t = it.t;
+      info.appendChild(t);
+
+      a.appendChild(pic);
+      a.appendChild(info);
+      feedEl.appendChild(a);
+    });
+    newKeys = {};
+  }
+
+  // ---------- join confirmation ----------
+  var dlg = $("dlg");
+  var pendingHref = "";
+
+  function skipConfirm() {
+    try { return localStorage.getItem("skipJoinConfirm") === "1"; } catch (e) { return false; }
+  }
+
+  feedEl.addEventListener("click", function (e) {
+    var a = e.target.closest("a.item");
+    if (!a) return;
+    e.preventDefault();
+    var href = a.getAttribute("href");
+    if (skipConfirm()) { location.href = href; return; }
+    pendingHref = href;
+    $("dlgEgg").textContent = a.dataset.egg || "";
+    $("never").checked = false;
+    dlg.showModal();
+  });
+
+  $("dlgNo").addEventListener("click", function () { dlg.close(); });
+  $("dlgYes").addEventListener("click", function () {
+    if ($("never").checked) {
+      try { localStorage.setItem("skipJoinConfirm", "1"); } catch (e) {}
+    }
+    dlg.close();
+    location.href = pendingHref;
+  });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+
+  // ---------- webhook alerts (3 slots) ----------
+  var API = FEED_URL.replace(/\/feed$/, "");
+  var SLOT = 1;
+  var slots = {};
+
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  function getToken() {
+    var t = lsGet("subToken") || "";
+    if (!/^[0-9a-f]{32}$/.test(t)) {
+      var a = new Uint8Array(16); crypto.getRandomValues(a);
+      t = Array.prototype.map.call(a, function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+      lsSet("subToken", t);
+    }
+    return t;
+  }
+  function setStatus(msg, bad) { $("hookStatus").textContent = msg; $("hookStatus").className = bad ? "bad" : ""; }
+
+  function currentFilters() {
+    return {
+      tiers: F.all ? [] : Object.keys(F.tiers),
+      mut: Object.keys(F.mut),
+      kgMin: F.kgMin > 0 ? kgAt(F.kgMin) : null,
+      kgMax: F.kgMax < 200 ? kgAt(F.kgMax) : null,
+      vMin: F.vMin > 0 ? valAt(F.vMin) : null,
+      vMax: F.vMax < 200 ? valAt(F.vMax) : null,
+      pos: { kgMin: F.kgMin, kgMax: F.kgMax, vMin: F.vMin, vMax: F.vMax }
+    };
+  }
+
+  function applyFilters(f) {
+    var n = defaults();
+    n.all = !(f.tiers && f.tiers.length);
+    if (!n.all) f.tiers.forEach(function (t) { if (TIERS.indexOf(t) > -1) n.tiers[t] = true; });
+    (f.mut || []).forEach(function (m) { if (MUTS.indexOf(m) > -1) n.mut[m] = true; });
+    var p = f.pos || {};
+    n.kgMin = clampInt(p.kgMin, 0, 199, 0); n.kgMax = clampInt(p.kgMax, 1, 200, 200);
+    n.vMin = clampInt(p.vMin, 0, 199, 0);   n.vMax = clampInt(p.vMax, 1, 200, 200);
+    F = n;
+    changed();
+  }
+
+  function post(path, body) {
+    return fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, t: t }; }); });
+  }
+
+  function paintTabs() {
+    document.querySelectorAll(".slot").forEach(function (b) {
+      var n = +b.dataset.slot;
+      b.classList.toggle("sel", n === SLOT);
+      b.classList.toggle("on", !!slots[n]);
+    });
+  }
+
+  function selectSlot(n, loadFilters) {
+    SLOT = n;
+    paintTabs();
+    var s = slots[n];
+    $("hook").value = "";
+    if (s) {
+      $("hook").placeholder = "Webhook saved (paste a new one to replace)";
+      $("ping").value = s.ping;
+      $("pingType").value = s.pingType;
+      if (loadFilters && s.filters) applyFilters(s.filters);
+      setStatus("Webhook " + n + " is on. Change the options, then press Save to update it.");
+    } else {
+      $("hook").placeholder = "Webhook";
+      $("ping").value = "";
+      setStatus("Webhook " + n + " is empty. Set your options, paste a webhook, then press Save.");
+    }
+  }
+
+  function refreshSlots(reselect) {
+    return post("/slots", { token: getToken() }).then(function (res) {
+      var list = [];
+      try { list = JSON.parse(res.t); } catch (e) {}
+      slots = {};
+      list.forEach(function (r) { slots[r.slot] = r; });
+      if (reselect) selectSlot(SLOT, false); else paintTabs();
+    }).catch(function () {});
+  }
+
+  $("slots").addEventListener("click", function (e) {
+    var b = e.target.closest(".slot");
+    if (b) selectSlot(+b.dataset.slot, true);
+  });
+
+  $("hookSave").addEventListener("click", function () {
+    var body = { token: getToken(), slot: SLOT, ping: $("ping").value, pingType: $("pingType").value, filters: currentFilters() };
+    var hook = $("hook").value.trim();
+    if (hook) body.webhook = hook;
+    setStatus("Saving...");
+    post("/sub", body).then(function (res) {
+      if (!res.ok) { setStatus(res.t || "Could not save", true); return; }
+      return refreshSlots(true).then(function () {
+        setStatus("Saved to Webhook " + SLOT + ". Eggs that match these options will be sent there.");
+      });
+    }).catch(function () { setStatus("Could not reach the server", true); });
+  });
+
+  $("hookTest").addEventListener("click", function () {
+    setStatus("Sending test...");
+    post("/subtest", { token: getToken(), slot: SLOT }).then(function (res) {
+      setStatus(res.ok ? "Test alert sent to Webhook " + SLOT + "." : (res.t || "Test failed"), !res.ok);
+    }).catch(function () { setStatus("Could not reach the server", true); });
+  });
+
+  $("hookRemove").addEventListener("click", function () {
+    var n = SLOT;
+    post("/unsub", { token: getToken(), slot: n }).then(function () {
+      return refreshSlots(true).then(function () { setStatus("Webhook " + n + " removed and deleted from our server."); });
+    }).catch(function () { setStatus("Could not reach the server", true); });
+  });
+
+  refreshSlots(false).then(function () {
+    var first = [1, 2, 3].filter(function (n) { return slots[n]; })[0];
+    if (first) selectSlot(first, true); else selectSlot(1, false);
+  });
+
+  // ---------- egg calculator ----------
+  // Same math as the Roblox script. [name, rarity, base income per second, base weight in Kg, estimated?]
+  // Royal Skywhale is not here because the script has no income data for it yet.
+  var CALC_EGGS = [
+    ["RazorFang", "Secret", 350e6, 12000, false],
+    ["Gargoyle", "Secret", 225e6, 10000, false],
+    ["Centaur", "Secret", 350e6, 12000, false],
+    ["Pure Jellyfish", "Secret", 225e6, 10000, false],
+    ["Mutant Shark", "Secret", 215e6, 60000, true],
+    ["Cosmic Skeleton", "Secret", 45e6, 1000, false],
+    ["Stag", "Secret", 145e6, 180, false],
+    ["Starry Fox", "Secret", 750e6, 1500, true],
+    ["Skeleton Horse", "Eternal", 1.3e9, 65000, false],
+    ["Pegasus", "Eternal", 1.3e9, 65000, false],
+    ["Oni Tiger", "Eternal", 600e6, 300, false],
+    ["Gorilla King", "Eternal", 880e6, 100000, false],
+    ["Eternal Lunar Dragon", "Eternal", 250e6, 60000, false],
+    ["Celestial Sunlion", "Eternal", 2e9, 17000, true],
+    ["World Burner", "Divine", 5e9, 120000, false],
+    ["ArchAngel", "Divine", 5e9, 120000, false],
+    ["Nightflame", "Divine", 3e9, 160000, false],
+    ["Kitsune", "Divine", 1.8e9, 260, false],
+    ["Unicorn", "Divine", 1e9, 1200, false]
+  ];
+  // name, multiplier. Mutations add together: 1 + sum(multiplier - 1)
+  var CALC_MUTS = [
+    ["Silver", 1.2], ["Golden", 2.5], ["Rainbow", 3.5], ["Parasite", 3],
+    ["Bloom", 1.25], ["Spirit Bloom", 2.5], ["Fractured", 2.75], ["Scrambled", 2.75], ["Enchanted", 2.85]
+  ];
+  var CALC_LOW = 0.5;     // at or below this ratio the low curve is used (5000 Kg Gargoyle matches it)
+  var CALC_HIGH = 125;    // above this ratio the flatter 0.40 curve is used
+  var calcPicked = {};
+
+  function calcWeightMult(ratio) {
+    if (ratio > CALC_HIGH) return Math.pow(CALC_HIGH, 37 / 60) * Math.pow(ratio / CALC_HIGH, 0.40);
+    if (ratio > CALC_LOW) return Math.pow(ratio, 37 / 60);
+    return Math.pow(ratio, 5 / 3);
+  }
+  function calcMoney(n) {
+    var u = ["", "K", "M", "B", "T", "Qa", "Qi"], i = 0;
+    while (n >= 1000 && i < u.length - 1) { n /= 1000; i++; }
+    return "$" + n.toFixed(2) + u[i] + "/s";
+  }
+
+  function calcRun() {
+    var out = $("calcOut");
+    out.textContent = "";
+    var egg = CALC_EGGS[+$("calcEgg").value];
+    var kg = parseFloat($("calcKg").value.replace(/[,\s]/g, ""));
+    if (!egg) return;
+    if (isNaN(kg) || kg <= 0) {
+      out.appendChild(line("div", "Type a weight in Kg to see the value.", "line"));
+      return;
+    }
+    var ratio = kg / egg[3];
+    var base = egg[2] * calcWeightMult(ratio);
+    var mult = 1, names = [];
+    CALC_MUTS.forEach(function (m) {
+      if (calcPicked[m[0]]) { mult += m[1] - 1; names.push(m[0]); }
+    });
+    out.appendChild(line("div", calcMoney(base * mult), "big"));
+    out.appendChild(line("div", ratio.toFixed(ratio < 10 ? 3 : 1) + "x its base weight (" + egg[3].toLocaleString("en-US") + " Kg)", "line"));
+    if (names.length) {
+      out.appendChild(line("div", "Without mutations: " + calcMoney(base), "line"));
+      out.appendChild(line("div", names.join(" + ") + ": x" + mult.toFixed(2).replace(/\.?0+$/, ""), "line"));
+    }
+    if (egg[4]) out.appendChild(line("div", "This egg's base income is an estimate, so the number may be a little off.", "warn"));
+    if (ratio > CALC_LOW && ratio < 0.9) out.appendChild(line("div", "Eggs between 0.5x and 0.9x base weight are not fully tested yet.", "warn"));
+  }
+
+  (function setupCalc() {
+    var sel = $("calcEgg");
+    TIERS.forEach(function (tier) {
+      var grp = document.createElement("optgroup");
+      grp.label = tier;
+      CALC_EGGS.forEach(function (e, i) {
+        if (e[1] !== tier) return;
+        var o = document.createElement("option");
+        o.value = i;
+        o.textContent = e[0];
+        grp.appendChild(o);
+      });
+      sel.appendChild(grp);
+    });
+    CALC_EGGS.forEach(function (e, i) { if (e[0] === "Gargoyle") sel.value = i; });
+
+    var chips = $("calcChips");
+    CALC_MUTS.forEach(function (m) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = m[0];
+      b.dataset.name = m[0];
+      chips.appendChild(b);
+    });
+    chips.addEventListener("click", function (e) {
+      var c = e.target.closest(".chip");
+      if (!c) return;
+      var n = c.dataset.name;
+      if (calcPicked[n]) delete calcPicked[n]; else calcPicked[n] = true;
+      c.classList.toggle("on", !!calcPicked[n]);
+      calcRun();
+    });
+    sel.addEventListener("change", calcRun);
+    $("calcKg").addEventListener("input", calcRun);
+    calcRun();
+  })();
+
+  // ---------- channel wallpapers ----------
+  function isImage(v) { return /^https?:\/\//i.test(v) || /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(v); }
+  function setWallpaper(n) {
+    var v = WALLPAPERS[n] || "";
+    var ok = isImage(v);
+    document.body.style.setProperty("--wall", ok ? 'url("' + v.replace(/"/g, "%22") + '")' : "none");
+    document.body.classList.toggle("nowall", !ok);
+    $("wallLabel").textContent = ok ? "" : v;
+  }
+
+  // ---------- pages ----------
+  $("pages").addEventListener("click", function (e) {
+    var b = e.target.closest(".pg");
+    if (!b) return;
+    var n = +b.dataset.pg;
+    document.querySelectorAll(".pg").forEach(function (x) { x.classList.toggle("sel", x === b); });
+    ["left", "joinCard", "right"].forEach(function (id) { $(id).hidden = n !== 1; });
+    $("blank").hidden = n === 1;
+    setWallpaper(n);
+  });
+  setWallpaper(1);
+
+  // ---------- polling ----------
+  // ---------- egg countdown (4:50 from the first alert of a round) ----------
+  var cycleStart = null, cycleWin = 290000, clockOffset = 0;
+
+  function fmt(ms) {
+    var t = Math.max(0, Math.ceil(ms / 1000));
+    return Math.floor(t / 60) + ":" + ("0" + (t % 60)).slice(-2);
+  }
+  function paintCycle() {
+    var el = $("cycle");
+    if (!cycleStart) { el.textContent = ""; el.className = ""; return; }
+    var left = cycleStart + cycleWin - (Date.now() + clockOffset);
+    if (left > 0) { el.textContent = "Eggs end in " + fmt(left); el.className = ""; }
+    else { el.textContent = "Ended. Next alert = new spawn"; el.className = "done"; }
+  }
+
+  function poll() {
+    if (!FEED_URL) { feedEl.textContent = "Feed not set up yet."; return; }
+    fetch(FEED_URL, { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var items = Array.isArray(d) ? d : (d && d.items);
+        if (d && d.cycle) {
+          cycleStart = d.cycle.start;
+          cycleWin = d.cycle.windowMs || 290000;
+          clockOffset = d.cycle.now - Date.now();
+        }
+        if (Array.isArray(items)) setItems(items);
+        paintCycle();
+      })
+      .catch(function () {});
+  }
+
+  setInterval(function () {
+    feedEl.querySelectorAll("span[data-t]").forEach(function (s) { s.textContent = ago(+s.dataset.t); });
+    paintCycle();
+  }, 1000);
+
+  loadF();
+  syncUI();
+  poll();
+
+  // Check every 2s. A tiny background worker keeps the timer running even when this tab is hidden.
+  try {
+    var ticker = new Worker(URL.createObjectURL(new Blob(
+      ["setInterval(function(){postMessage(1)},2000)"], { type: "text/javascript" })));
+    ticker.onmessage = poll;
+  } catch (e) {
+    setInterval(poll, 2000);
+  }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) poll(); });
+  window.addEventListener("focus", poll);
+</script>
+</body>
+</html>
