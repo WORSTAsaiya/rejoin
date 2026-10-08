@@ -134,9 +134,9 @@
   .calc { margin:0; }
   .calc h2 { margin:0 0 12px; font-size:16px; }
   .calc label.cl { display:block; margin:10px 0 6px; font-size:12px; color:#b5bac1; }
-  #calcEgg, #calcKg { width:100%; box-sizing:border-box; padding:10px 12px; background:#1e1f22; color:#f2f3f5;
+  #calcEgg, #calcKg, #calcRarity { width:100%; box-sizing:border-box; padding:10px 12px; background:#1e1f22; color:#f2f3f5;
                       border:1px solid #4e5058; border-radius:8px; font-size:13px; }
-  #calcEgg:focus, #calcKg:focus { outline:2px solid #3498db; border-color:transparent; }
+  #calcEgg:focus, #calcKg:focus, #calcRarity:focus { outline:2px solid #3498db; border-color:transparent; }
   .calcout { margin-top:14px; padding:12px; background:#1e1f22; border-radius:8px; }
   .calcout .big { font-size:22px; font-weight:700; color:#7bd88f; word-break:break-word; }
   .calcout .line { font-size:12px; color:#b5bac1; margin-top:6px; word-break:break-word; }
@@ -272,6 +272,8 @@
 <section class="panel" id="calcPage" hidden>
 <div class="calc" id="calc">
   <h2>Egg Calculator</h2>
+  <label class="cl" for="calcRarity">Rarity</label>
+  <select id="calcRarity"></select>
   <label class="cl" for="calcEgg">Egg</label>
   <select id="calcEgg"></select>
   <label class="cl" for="calcKg">Weight (Kg)</label>
@@ -781,29 +783,192 @@
   });
 
   // ---------- egg calculator ----------
-  // Same math as the Roblox script. [name, rarity, base income per second, base weight in Kg, estimated?]
-  // Royal Skywhale is not here because the script has no income data for it yet.
+  // Same math as the Roblox script. [name, rarity, base income per second, base weight in Kg (null = unknown), estimated?]
+  var CALC_TIERS = ["Divine", "Eternal", "Secret", "Cosmic", "Mythic", "Legendary", "Epic", "Rare", "Uncommon", "Common"];
   var CALC_EGGS = [
-    ["RazorFang", "Secret", 350e6, 12000, false],
-    ["Gargoyle", "Secret", 225e6, 10000, false],
-    ["Centaur", "Secret", 350e6, 12000, false],
-    ["Pure Jellyfish", "Secret", 225e6, 10000, false],
-    ["Mutant Shark", "Secret", 215e6, 60000, true],
-    ["Cosmic Skeleton", "Secret", 45e6, 1000, false],
-    ["Stag", "Secret", 145e6, 180, false],
-    ["Starry Fox", "Secret", 750e6, 1500, true],
-    ["Skeleton Horse", "Eternal", 1.3e9, 65000, false],
-    ["Pegasus", "Eternal", 1.3e9, 65000, false],
-    ["Oni Tiger", "Eternal", 600e6, 300, false],
-    ["Gorilla King", "Eternal", 880e6, 100000, false],
-    ["Eternal Lunar Dragon", "Eternal", 250e6, 60000, false],
-    ["Celestial Sunlion", "Eternal", 2e9, 17000, true],
-    ["World Burner", "Divine", 5e9, 120000, false],
-    ["ArchAngel", "Divine", 5e9, 120000, false],
-    ["Nightflame", "Divine", 3e9, 160000, false],
-    ["Kitsune", "Divine", 1.8e9, 260, false],
-    ["Unicorn", "Divine", 1e9, 1200, false],
-    ["Royal Skywhale", "Divine", 8e9, 190000, false]
+    ["Unicorn", "Divine", 1000000000, 1200, false],
+    ["Archdemon Dragon", "Divine", 1250000000, 120000, false],
+    ["Kitsune", "Divine", 1800000000, 260, false],
+    ["Cthulhu", "Divine", 3000000000, 13000, false],
+    ["Nightflame", "Divine", 3000000000, 160000, false],
+    ["Shattered Colossus", "Divine", 3500000000, 16000, false],
+    ["Octophant", "Divine", 4000000000, 30000, true],
+    ["ArchAngel", "Divine", 5000000000, 120000, false],
+    ["Sabertooth", "Divine", 5000000000, 60000, false],
+    ["World Burner", "Divine", 5000000000, 120000, false],
+    ["Luminous Cthulhu", "Divine", 6500000000, 13000, false],
+    ["Aetheron", "Divine", 6900000000, 12000, false],
+    ["Mecha Scrambler", "Divine", 7500000000, 30000, false],
+    ["Royal Skywhale", "Divine", 8000000000, 190000, false],
+    ["Skeletal Sabertooth", "Divine", 9000000000, 60000, false],
+    ["Ice Dragon", "Eternal", 65000000, 8500, false],
+    ["Phoenix", "Eternal", 85000000, 2500, false],
+    ["Lava Dragon", "Eternal", 100000000, 14000, false],
+    ["Void Dragon", "Eternal", 120000000, 12000, false],
+    ["El Maja", "Eternal", 130000000, 90000, false],
+    ["Mosasaurus", "Eternal", 180000000, 30000, false],
+    ["Eternal Lunar Dragon", "Eternal", 250000000, 60000, false],
+    ["World Eater", "Eternal", 500000000, 25000, false],
+    ["Oni Tiger", "Eternal", 600000000, 300, false],
+    ["Terra Snapper", "Eternal", 750000000, 60000, false],
+    ["Shattered Drake", "Eternal", 800000000, 30000, false],
+    ["Gorilla King", "Eternal", 880000000, 100000, false],
+    ["Void Serpent", "Eternal", 900000000, 14000, false],
+    ["Gigantus", "Eternal", 1000000000, null, true],
+    ["Rhinobear", "Eternal", 1000000000, 20000, false],
+    ["Pegasus", "Eternal", 1300000000, 65000, false],
+    ["Skeleton Horse", "Eternal", 1300000000, 65000, false],
+    ["Nuclear Mantis", "Eternal", 1500000000, 2000, false],
+    ["Luminous Electric Eel", "Eternal", 1750000000, 45, false],
+    ["Equinox", "Eternal", 1800000000, 65000, false],
+    ["Dreadstinger", "Eternal", 2000000000, 4000, false],
+    ["Celestial Sunlion", "Eternal", 2000000000, 17000, true],
+    ["Luminous Terra Snapper", "Eternal", 2500000000, 60000, false],
+    ["Pink Dragon Experiment #010", "Eternal", 2500000000, 1234, false],
+    ["Skeletal Dunkleosteus", "Eternal", 2500000000, 20000, false],
+    ["Skeletal Gigantus", "Eternal", 4000000000, 35000, false],
+    ["Abyss Overlord", "Secret", 1250000, 13000, false],
+    ["67", "Secret", 1550000, null, true],
+    ["Toxic Hedgehog", "Secret", 1750000, 8000, true],
+    ["King Snake", "Secret", 3500000, 10000, false],
+    ["Yeti", "Secret", 5000000, 1500, false],
+    ["Cerberus", "Secret", 8000000, 9000, false],
+    ["Kraken", "Secret", 15000000, 18000, false],
+    ["Ring Guard", "Secret", 15000000, null, true],
+    ["Wendigo", "Secret", 15000000, 12000, false],
+    ["T-Rex", "Secret", 25000000, 7500, false],
+    ["Tralaledon", "Secret", 32000000, 1000, false],
+    ["Scorched Dragon", "Secret", 35000000, 120000, false],
+    ["Cosmic Skeleton Boss", "Secret", 45000000, 1000, false],
+    ["Cosmic Dragon", "Secret", 60000000, 15000, false],
+    ["Mawbreaker", "Secret", 60000000, 13000, false],
+    ["Shardwing", "Secret", 145000000, 9500, false],
+    ["Stag", "Secret", 145000000, 180, false],
+    ["Electric Eel", "Secret", 200000000, 45, false],
+    ["Mutant Shark", "Secret", 215000000, 60000, true],
+    ["Gargoyle", "Secret", 225000000, 10000, false],
+    ["Pure Jellyfish", "Secret", 225000000, 10000, false],
+    ["Experiment #001", "Secret", 285000000, null, true],
+    ["Dunkleosteus", "Secret", 300000000, 20000, false],
+    ["Centaur", "Secret", 350000000, 12000, false],
+    ["Luminous Spike", "Secret", 350000000, 250, false],
+    ["RazorFang", "Secret", 350000000, 12000, false],
+    ["Sharkodile", "Secret", 350000000, 30000, false],
+    ["Luminous Spirit Manta", "Secret", 500000000, 450, false],
+    ["Nuceodile", "Secret", 500000000, 6000, false],
+    ["Skeletal Glyptodon", "Secret", 550000000, 3000, false],
+    ["Ember Dragon", "Secret", 600000000, 14000, false],
+    ["Luminous Abyss Shark", "Secret", 600000000, 60000, false],
+    ["Mecha Chompa", "Secret", 600000000, 1234, false],
+    ["Skeletal Terrorbird", "Secret", 750000000, 6000, false],
+    ["Starry Fox", "Secret", 750000000, 1500, true],
+    ["Eyeball Crab", "Secret", 825000000, 1200, false],
+    ["Ringlord", "Secret", 825000000, null, true],
+    ["Skeletal Giant Sloth", "Secret", 900000000, 12000, false],
+    ["Nibbles #013", "Cosmic", 185000, null, true],
+    ["Leviathan", "Cosmic", 220000, 5000, false],
+    ["Royal Sphinx", "Cosmic", 280000, 4000, false],
+    ["King Mammoth", "Cosmic", 400000, 25000, false],
+    ["Ventinal", "Cosmic", 585000, 10000, false],
+    ["Uncoiled Armadillo", "Cosmic", 625000, 1234, false],
+    ["Whale Shark", "Cosmic", 700000, 2000, false],
+    ["Beluga Whale", "Cosmic", 850000, 5000, false],
+    ["Triceratops", "Cosmic", 1200000, 3500, false],
+    ["Bronto", "Cosmic", 1500000, 35000, false],
+    ["Dreadclaw", "Cosmic", 2200000, 9000, false],
+    ["La Vacca Saturno Saturnita", "Cosmic", 2200000, 740, false],
+    ["Radcoon", "Cosmic", 2200000, 25, false],
+    ["Abyss Shark", "Cosmic", 2500000, 60000, false],
+    ["Giant Sloth", "Cosmic", 4000000, 12000, false],
+    ["Snowy Owl", "Cosmic", 7500000, 20, false],
+    ["Shattered Ram", "Cosmic", 8000000, 13000, false],
+    ["Mantaris", "Cosmic", 11000000, 1500, false],
+    ["Koi", "Cosmic", 12000000, 120, false],
+    ["Stacked Turtle", "Cosmic", 12000000, 300, false],
+    ["Imp", "Cosmic", 16000000, 9000, false],
+    ["Sacred Moth", "Cosmic", 16000000, 9000, false],
+    ["Rhinotaur", "Cosmic", 17500000, 35000, false],
+    ["Demon Hound", "Cosmic", 25000000, 9000, false],
+    ["Holy Peacock", "Cosmic", 25000000, 9000, false],
+    ["Spiderpig", "Cosmic", 25000000, 180, false],
+    ["Toucax", "Cosmic", 30000000, 12, false],
+    ["Drilla", "Cosmic", 100000000, 5000, false],
+    ["Three Headed Chicken", "Cosmic", 165000000, 24, false],
+    ["Sand Spider", "Mythic", 16000, 120, false],
+    ["Scorpion", "Mythic", 18500, 75, false],
+    ["Spider", "Mythic", 22000, 120, false],
+    ["Tiger", "Mythic", 28000, 260, false],
+    ["Sabertooth Tiger", "Mythic", 35000, 350, false],
+    ["Mammoth", "Mythic", 42000, 2000, false],
+    ["Voidmaw", "Mythic", 50000, 13000, false],
+    ["Chillin Chilli", "Mythic", 55000, 30, false],
+    ["Spirit Manta", "Mythic", 75000, 450, false],
+    ["Orca", "Mythic", 80000, 1800, false],
+    ["Terrorbird", "Mythic", 110000, 6000, false],
+    ["Ankylosaurus", "Mythic", 120000, 2500, false],
+    ["Cosmic Gorilla", "Mythic", 180000, 450, false],
+    ["Toxic Rat", "Mythic", 180000, 8, false],
+    ["Riftwing", "Mythic", 220000, 13000, false],
+    ["Red Panda", "Mythic", 450000, 25, true],
+    ["Shardling", "Mythic", 450000, 13000, false],
+    ["Wheel Hamster", "Mythic", 450000, 4, false],
+    ["Bladehide", "Mythic", 750000, 1700, false],
+    ["Frogfly", "Mythic", 1250000, 25, false],
+    ["Toro", "Mythic", 1250000, 72000, true],
+    ["Winged Lamb", "Mythic", 1250000, 72000, true],
+    ["Citadel Snail #007", "Mythic", 12500000, 1234, true],
+    ["Shadow Dragon", "Mythic", 25000000, 10000, false],
+    ["Brr Brr Patapim", "Legendary", 1800, 800, false],
+    ["Axolotl", "Legendary", 2800, 28, false],
+    ["Snake", "Legendary", 3600, 45, false],
+    ["Gorilla", "Legendary", 4800, 190, false],
+    ["Orangutini Ananassini", "Legendary", 5500, 140, false],
+    ["Polar Bear", "Legendary", 7000, 650, false],
+    ["Flaming Bull", "Legendary", 9500, 450, false],
+    ["Lava Iguana", "Legendary", 11000, 400, false],
+    ["Rift Eye", "Legendary", 11000, 13000, false],
+    ["Shark", "Legendary", 15000, 450, false],
+    ["Spike", "Legendary", 15000, 250, false],
+    ["Pterodactyl", "Legendary", 22000, 180, false],
+    ["Glyptodon", "Legendary", 22500, 3000, false],
+    ["Cosmic Gecko", "Legendary", 30000, 18, false],
+    ["Void Angler", "Legendary", 30000, 13000, false],
+    ["Salamander", "Legendary", 74000, 30, false],
+    ["Spideron", "Legendary", 95000, 600, false],
+    ["Eye Bat #021", "Legendary", 115000, 1234, false],
+    ["Crustacia", "Legendary", 130000, 1000, false],
+    ["Flame Sprite", "Legendary", 225000, 45000, false],
+    ["Light Dove", "Legendary", 225000, 45000, false],
+    ["Baby Aurora Dragon", "Legendary", 5000000, 8000, false],
+    ["Fox", "Epic", 180, 28, false],
+    ["Bear", "Epic", 240, 220, false],
+    ["Trulimero Trulicina", "Epic", 260, 140, false],
+    ["Swan", "Epic", 320, 22, false],
+    ["Tob Tobi Tob Tob", "Epic", 325, 700, false],
+    ["Crocodile", "Epic", 420, 400, false],
+    ["Walrus", "Epic", 600, 200, false],
+    ["Lava Frog", "Epic", 850, 4, false],
+    ["Swordfish", "Epic", 1100, 250, false],
+    ["Centapede", "Epic", 1500, 6, false],
+    ["Crane", "Epic", 4000, 22, false],
+    ["Burrowing Owl", "Rare", 35, 8, false],
+    ["Raccoon", "Rare", 45, 19, false],
+    ["Turtle", "Rare", 60, 100, false],
+    ["Camel", "Rare", 75, 700, false],
+    ["Chimpanzee", "Rare", 90, 65, false],
+    ["Toucan", "Rare", 110, 5, false],
+    ["Penguin", "Rare", 140, 16, false],
+    ["Lava Gecko", "Rare", 180, 14, false],
+    ["Parrotfish", "Rare", 220, 5, false],
+    ["Dodo", "Rare", 280, 20, false],
+    ["Bird", "Uncommon", 8, 5, false],
+    ["Catfish", "Uncommon", 12, 35, false],
+    ["Fennec", "Uncommon", 18, 8, false],
+    ["Chicken", "Common", 1, 8, false],
+    ["Dog", "Common", 2, 25, false],
+    ["Frog", "Common", 3, 3, false],
+    ["Duckling", "Common", 4, 3, false],
+    ["Jerboa", "Common", 6, 2, false]
   ];
   // name, multiplier. Mutations add together: 1 + sum(multiplier - 1)
   var CALC_MUTS = [
@@ -831,6 +996,11 @@
     var egg = CALC_EGGS[+$("calcEgg").value];
     var kg = parseFloat($("calcKg").value.replace(/[,\s]/g, ""));
     if (!egg) return;
+    if (egg[3] === null) {
+      out.appendChild(line("div", calcMoney(egg[2]), "big"));
+      out.appendChild(line("div", "Base income only. This egg's base weight is not known yet, so the weight can't be used.", "warn"));
+      return;
+    }
     if (isNaN(kg) || kg <= 0) {
       out.appendChild(line("div", "Type a weight in Kg to see the value.", "line"));
       return;
@@ -847,25 +1017,41 @@
       out.appendChild(line("div", "Without mutations: " + calcMoney(base), "line"));
       out.appendChild(line("div", names.join(" + ") + ": x" + mult.toFixed(2).replace(/\.?0+$/, ""), "line"));
     }
-    if (egg[4]) out.appendChild(line("div", "This egg's base income is an estimate, so the number may be a little off.", "warn"));
+    if (egg[4]) out.appendChild(line("div", "This egg's base numbers are marked as estimates, so the result may be a little off.", "warn"));
     if (ratio > CALC_LOW && ratio < 0.9) out.appendChild(line("div", "Eggs between 0.5x and 0.9x base weight are not fully tested yet.", "warn"));
   }
 
   (function setupCalc() {
     var sel = $("calcEgg");
-    TIERS.forEach(function (tier) {
-      var grp = document.createElement("optgroup");
-      grp.label = tier;
+    var rar = $("calcRarity");
+
+    // rarity dropdown, with how many eggs each one has
+    CALC_TIERS.forEach(function (tier) {
+      var n = CALC_EGGS.filter(function (e) { return e[1] === tier; }).length;
+      var o = document.createElement("option");
+      o.value = tier;
+      o.textContent = tier + " (" + n + ")";
+      rar.appendChild(o);
+    });
+
+    // egg dropdown: only the eggs of the chosen rarity
+    function fillEggs() {
+      sel.textContent = "";
       CALC_EGGS.forEach(function (e, i) {
-        if (e[1] !== tier) return;
+        if (e[1] !== rar.value) return;
         var o = document.createElement("option");
         o.value = i;
-        o.textContent = e[0];
-        grp.appendChild(o);
+        o.textContent = e[0] + (e[3] === null ? " (weight unknown)" : "");
+        sel.appendChild(o);
       });
-      sel.appendChild(grp);
-    });
+      calcRun();
+    }
+
+    rar.value = "Secret";
+    fillEggs();
     CALC_EGGS.forEach(function (e, i) { if (e[0] === "Gargoyle") sel.value = i; });
+    calcRun();
+    rar.addEventListener("change", fillEggs);
 
     var chips = $("calcChips");
     CALC_MUTS.forEach(function (m) {
