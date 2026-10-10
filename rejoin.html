@@ -161,6 +161,32 @@
   .dlgbtns .yes { background:#3498db; } .dlgbtns .no { background:#4e5058; }
   .never { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:14px; font-size:12px; color:#b5bac1; cursor:pointer; }
 
+  /* ---- unlock animation: green screen tears in half, then the panels slide in ---- */
+  #gate button.btn:disabled { opacity:.6; cursor:wait; }
+  #gate.shake { animation:shake .4s; }
+  #tear { position:fixed; inset:0; z-index:1000; pointer-events:none; overflow:hidden; }
+  #tear .half { position:absolute; top:0; bottom:0; width:52%; opacity:0; background:#2ecc71; }
+  #tear .l { left:0; transform-origin:0 100%; }
+  #tear .r { right:0; transform-origin:100% 100%; }
+  #tear.flood .half { animation:tearFlood .4s ease-out forwards; }
+  #tear.split .half { opacity:1; }
+  #tear.split .l { animation:tearL .95s cubic-bezier(.65,0,.35,1) forwards; }
+  #tear.split .r { animation:tearR .95s cubic-bezier(.65,0,.35,1) forwards; }
+  body.enter { overflow-x:hidden; }
+  body.enter #opts   { animation:inL .6s .45s cubic-bezier(.2,.8,.2,1) both; }
+  body.enter #vals   { animation:inL .6s .6s  cubic-bezier(.2,.8,.2,1) both; }
+  body.enter #eggs   { animation:inL .6s .75s cubic-bezier(.2,.8,.2,1) both; }
+  body.enter #feedPanel { animation:inU .6s .9s cubic-bezier(.2,.8,.2,1) both; }
+  body.enter #right  { animation:inR .6s .6s  cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes tearFlood { from { opacity:0; } to { opacity:1; } }
+  @keyframes tearL { from { transform:none; } to { transform:translateX(-104%) rotate(-3deg); } }
+  @keyframes tearR { from { transform:none; } to { transform:translateX(104%) rotate(3deg); } }
+  @keyframes inL { from { opacity:0; transform:translateX(-60px); } to { opacity:1; transform:none; } }
+  @keyframes inR { from { opacity:0; transform:translateX(60px); } to { opacity:1; transform:none; } }
+  @keyframes inU { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:none; } }
+  @keyframes shake { 20%, 60% { transform:translateX(-8px); } 40%, 80% { transform:translateX(8px); } }
+  @media (prefers-reduced-motion:reduce) { #tear { display:none !important; } body.enter * { animation:none !important; } }
+
   @keyframes flash { from { background:#3d5a80; } to { background:#2b2d31; } }
   @media (max-width:1200px) {
     body { grid-template-columns:minmax(0,1fr); justify-content:center; align-items:start; background-image:none; }
@@ -312,9 +338,11 @@
   <label class="never"><input type="checkbox" id="never"> Never remind again</label>
 </dialog>
 
+<div id="tear" hidden><div class="half l"></div><div class="half r"></div></div>
+
 <script>
   var FEED_URL = "https://eggfeed.asaiyamain.workers.dev/feed";
-  var PASSWORD = "W_1010203040506070809010";   // set your password here. Empty = no password required
+  var unlocked = false, authChecked = false;   // the password is checked by the Worker, it is not stored in this file
 
   // Wallpaper for each channel. Replace the placeholder text with an image link,
   // or with the file name of an image you uploaded next to join.html (for example "bg2.png").
@@ -585,7 +613,6 @@
   }
 
   function setItems(items) {
-    if (valid && !cardFilled) fillCard(items);
     if (!items.length) return;
     var sig = items.map(function (it) { return it.jobId + it.t; }).join(",");
     if (sig === lastSig) return;   // nothing new
@@ -722,8 +749,11 @@
   }
 
   function post(path, body) {
-    return fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-      .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, t: t }; }); });
+    return fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json", "x-pass": encodeURIComponent(lsGet("eggPw") || "") }, body: JSON.stringify(body) })
+      .then(function (r) {
+        if (r.status === 401) relock();
+        return r.text().then(function (t) { return { ok: r.ok, t: t }; });
+      });
   }
 
   function paintTabs() {
@@ -794,10 +824,12 @@
     }).catch(function () { setStatus("Could not reach the server", true); });
   });
 
-  refreshSlots(false).then(function () {
-    var first = [1, 2, 3].filter(function (n) { return slots[n]; })[0];
-    if (first) selectSlot(first, true); else selectSlot(1, false);
-  });
+  function initSlots() {
+    refreshSlots(false).then(function () {
+      var first = [1, 2, 3].filter(function (n) { return slots[n]; })[0];
+      if (first) selectSlot(first, true); else selectSlot(1, false);
+    });
+  }
 
   // ---------- egg calculator ----------
   // Same math as the Roblox script. [name, rarity, base income per second, base weight in Kg (null = unknown), estimated?]
@@ -1103,17 +1135,15 @@
   }
 
   // ---------- channels and pages ----------
-  function isUnlocked() { return !PASSWORD || lsGet("eggPw") === PASSWORD; }
-
   function showView() {
     var ch = +$("chSel").value, pg = +$("pgSel").value;
     var live = ch === 1;                      // only channel 1 exists for now
     var notifier = live && pg === 1;
-    var open = isUnlocked();
+    var open = unlocked;
     $("pgSel").disabled = !live;
     $("left").hidden = !(notifier && open);
     $("right").hidden = !(notifier && open);
-    $("gate").hidden = !(notifier && !open);
+    $("gate").hidden = !(notifier && authChecked && !open);
     $("joinCard").hidden = !(live && pg === 4);
     $("valuesPage").hidden = !(live && pg === 2);
     $("calcPage").hidden = !(live && pg === 3);
@@ -1121,16 +1151,69 @@
     setWallpaper(ch);
   }
 
-  function tryUnlock() {
-    if ($("pw").value === PASSWORD) {
-      lsSet("eggPw", PASSWORD);
-      $("pw").value = "";
-      $("pwErr").textContent = "";
-      showView();
-    } else {
-      $("pwErr").textContent = "Wrong password";
-    }
+  // the Worker checks the password, so it never appears in this file
+  function relock() {
+    unlocked = false; authChecked = true;
+    try { localStorage.removeItem("eggPw"); } catch (e) {}
+    showView();
   }
+  function unlock() {
+    unlocked = true; authChecked = true;
+    showView(); poll(); initSlots();
+  }
+  // torn edge: the two green halves share the same jagged line
+  (function () {
+    var xs = [97, 94, 99, 95, 100, 93, 98, 94, 99, 95, 97, 93, 100, 96, 94, 99, 95], n = xs.length - 1;
+    var lp = [], rp = [];
+    xs.forEach(function (x, i) {
+      var y = (i * 100 / n) + "%";
+      lp.push(x + "% " + y);
+      rp.push((x - 92.3077).toFixed(3) + "% " + y);
+    });
+    document.querySelector("#tear .l").style.clipPath = "polygon(0 0, " + lp.join(", ") + ", 0 100%)";
+    document.querySelector("#tear .r").style.clipPath = "polygon(" + rp.join(", ") + ", 100% 100%, 100% 0)";
+  })();
+
+  // correct password typed: green flood, tear in half, panels slide in
+  function reveal() {
+    var t = $("tear");
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { unlock(); return; }
+    t.hidden = false; t.className = "";
+    void t.offsetWidth;
+    t.className = "flood";
+    setTimeout(function () {
+      unlock();
+      document.body.classList.add("enter");
+      t.className = "split";
+    }, 450);
+    setTimeout(function () { t.hidden = true; t.className = ""; }, 1600);
+    setTimeout(function () { document.body.classList.remove("enter"); }, 2400);
+  }
+  function shake() {
+    var g = $("gate");
+    g.classList.remove("shake"); void g.offsetWidth; g.classList.add("shake");
+    setTimeout(function () { g.classList.remove("shake"); }, 500);
+  }
+  function checkAuth(pw, fromUser) {
+    var btn = $("pwBtn");
+    function done() { if (fromUser) { btn.disabled = false; btn.textContent = "Unlock"; } }
+    if (fromUser) { btn.disabled = true; btn.textContent = "Checking..."; $("pwErr").textContent = ""; }
+    fetch(API + "/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw }) })
+      .then(function (r) {
+        done();
+        if (r.ok) {
+          if (fromUser) lsSet("eggPw", pw);
+          $("pw").value = ""; $("pwErr").textContent = "";
+          if (fromUser) reveal(); else unlock();   // returning visitors skip the animation
+        } else {
+          if (!fromUser) { try { localStorage.removeItem("eggPw"); } catch (e) {} }
+          authChecked = true; showView();
+          if (fromUser) { $("pwErr").textContent = "Wrong password"; shake(); }
+        }
+      })
+      .catch(function () { done(); authChecked = true; showView(); $("pwErr").textContent = "Could not reach the server"; });
+  }
+  function tryUnlock() { checkAuth($("pw").value, true); }
   $("pwBtn").addEventListener("click", tryUnlock);
   $("pw").addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
 
@@ -1140,6 +1223,17 @@
   // a Discord invite link (?placeId=...&jobId=...) opens the Join tab
   if (placeId || jobId) $("pgSel").value = "4";
   showView();
+
+  // the Join tab loads just that one egg from the Worker (public, no password needed)
+  function loadInviteCard() {
+    if (!valid) return;
+    fetch(API + "/egg?placeId=" + encodeURIComponent(placeId) + "&jobId=" + encodeURIComponent(jobId), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (it) { if (it) fillCard([it]); })
+      .catch(function () {});
+  }
+  loadInviteCard();
+  checkAuth(lsGet("eggPw") || "", false);
 
   // ---------- polling ----------
   // ---------- egg countdown (4:50 from the first alert of a round) ----------
@@ -1159,8 +1253,9 @@
 
   function poll() {
     if (!FEED_URL) { feedEl.textContent = "Feed not set up yet."; return; }
-    fetch(FEED_URL, { cache: "no-store" })
-      .then(function (r) { return r.json(); })
+    if (!unlocked) return;
+    fetch(FEED_URL, { cache: "no-store", headers: { "x-pass": encodeURIComponent(lsGet("eggPw") || "") } })
+      .then(function (r) { if (r.status === 401) { relock(); throw 0; } return r.json(); })
       .then(function (d) {
         var items = Array.isArray(d) ? d : (d && d.items);
         if (d && d.cycle) {
