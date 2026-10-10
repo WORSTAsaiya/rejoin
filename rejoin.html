@@ -107,7 +107,14 @@
   .pages select { padding:8px 12px; background:#2b2d31; color:#f2f3f5; border:1px solid #4e5058; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
   .pages select:focus { outline:2px solid #3498db; border-color:transparent; }
   .pages select:disabled { opacity:.5; cursor:not-allowed; }
-  #blank { grid-column:2; }
+  #blank, #joinCard, #gate { grid-column:2; }
+  #left { grid-column:1; }
+  #right { grid-column:3; }
+  #gate input { width:100%; box-sizing:border-box; padding:10px 12px; margin:6px 0 12px; background:#1e1f22; color:#f2f3f5;
+                border:1px solid #4e5058; border-radius:8px; font-size:14px; }
+  #gate input:focus { outline:2px solid #3498db; border-color:transparent; }
+  #gate button.btn { border:0; cursor:pointer; font-size:14px; }
+  #pwErr { margin-top:10px; font-size:12px; color:#ff7b72; min-height:16px; }
 
   /* ---- webhook input ---- */
   #hook { width:100%; box-sizing:border-box; padding:10px 12px; background:#1e1f22; color:#f2f3f5;
@@ -160,7 +167,7 @@
     body::before { content:""; order:0; aspect-ratio:1983 / 793; border-radius:12px;
                    background:var(--wall) center / cover no-repeat; }
     body.nowall::before { display:none; }
-    #blank, #calcPage { grid-column:1; }
+    #blank, #calcPage, #joinCard, #gate, #left, #right { grid-column:1; }
     .card { order:1; padding:22px 18px; } #left { order:2; } #right { order:3; }
     #left, #right { max-width:none; justify-self:stretch; }
     #opts, #vals, #eggs { flex:1 1 100%; }
@@ -183,6 +190,7 @@
     <option value="1">Egg Notifiers</option>
     <option value="2">Egg Values</option>
     <option value="3">Egg Calculator</option>
+    <option value="4">Join</option>
   </select>
 </nav>
 
@@ -231,6 +239,14 @@
     <div id="feed"><div class="empty">Waiting for the first alert...</div></div>
   </aside>
 </section>
+
+<div class="card" id="gate" hidden>
+  <h1>Egg Notifiers</h1>
+  <p>Enter the password to view this page.</p>
+  <input id="pw" type="password" placeholder="Password" autocomplete="off" spellcheck="false">
+  <button id="pwBtn" class="btn" type="button">Unlock</button>
+  <div id="pwErr"></div>
+</div>
 
 <div class="card" id="joinCard">
   <div id="eggbox" hidden></div>
@@ -298,6 +314,7 @@
 
 <script>
   var FEED_URL = "https://eggfeed.asaiyamain.workers.dev/feed";
+  var PASSWORD = "W_1010203040506070809010";   // set your password here. Empty = no password required
 
   // Wallpaper for each channel. Replace the placeholder text with an image link,
   // or with the file name of an image you uploaded next to join.html (for example "bg2.png").
@@ -316,7 +333,7 @@
 
   if (!placeId && !jobId) {
     $("title").textContent = "No server selected";
-    $("msg").textContent = "Pick one from the list.";
+    $("msg").textContent = "Open a server link from Discord, or pick one from Egg Notifiers.";
     $("btn").style.display = "none";
   } else if (!valid) {
     $("title").textContent = "Invalid link";
@@ -1086,20 +1103,42 @@
   }
 
   // ---------- channels and pages ----------
+  function isUnlocked() { return !PASSWORD || lsGet("eggPw") === PASSWORD; }
+
   function showView() {
     var ch = +$("chSel").value, pg = +$("pgSel").value;
     var live = ch === 1;                      // only channel 1 exists for now
+    var notifier = live && pg === 1;
+    var open = isUnlocked();
     $("pgSel").disabled = !live;
-    $("left").hidden = !(live && pg === 1);
-    $("joinCard").hidden = !(live && pg === 1);
-    $("right").hidden = !(live && pg === 1);
+    $("left").hidden = !(notifier && open);
+    $("right").hidden = !(notifier && open);
+    $("gate").hidden = !(notifier && !open);
+    $("joinCard").hidden = !(live && pg === 4);
     $("valuesPage").hidden = !(live && pg === 2);
     $("calcPage").hidden = !(live && pg === 3);
     $("blank").hidden = live;
     setWallpaper(ch);
   }
+
+  function tryUnlock() {
+    if ($("pw").value === PASSWORD) {
+      lsSet("eggPw", PASSWORD);
+      $("pw").value = "";
+      $("pwErr").textContent = "";
+      showView();
+    } else {
+      $("pwErr").textContent = "Wrong password";
+    }
+  }
+  $("pwBtn").addEventListener("click", tryUnlock);
+  $("pw").addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
+
   $("chSel").addEventListener("change", showView);
   $("pgSel").addEventListener("change", showView);
+
+  // a Discord invite link (?placeId=...&jobId=...) opens the Join tab
+  if (placeId || jobId) $("pgSel").value = "4";
   showView();
 
   // ---------- polling ----------
